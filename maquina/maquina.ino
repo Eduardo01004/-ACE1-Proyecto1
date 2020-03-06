@@ -1,9 +1,13 @@
+#include <Timer.h>
+int estado = 1;
+
 //------------------------------------------- MOTOR EJE Y ----------------------------
-int ENB = 3;
+int ENB = 10;
 int IN3 = 7;
 int IN4 = 6;
 
 //-------------------------------------------- MOTOR EJE X ----------------------------
+int ENA = 11;
 int IN1 = 9;
 int IN2 = 8;
 
@@ -39,13 +43,14 @@ int tristeza [8][8] = {
 #define xJoystick A14
 #define yJoystick A15
 
+Timer temporal;
 void setup() {
   pinMode(botonJoystick, INPUT);
   Serial.begin(9600);
 
   // pinMode (ENA, OUTPUT);
   pinMode (ENB, OUTPUT);
-
+  pinMode (ENA, OUTPUT);
   pinMode (IN1, OUTPUT);
   pinMode (IN2, OUTPUT);
   pinMode (IN3, OUTPUT);
@@ -60,20 +65,28 @@ void setup() {
   pinMode(sensor2 , INPUT);
   pinMode(sensor3 , INPUT);
 
-
   //######################### BLUETOOTH ###########################
   Serial1.begin(38400);
-  Serial1.setTimeout(100);
 
-  Serial1.write("Puto\n");
 
 }
 
 void loop() {
+  switch (estado) {
+    //-------------------------- MANUAL -----------------------------------------------------
+    case 0:
+      break;
 
-  String entrada = "";
-  int x = moverX(analogRead(xJoystick));
-  int y = moverY(analogRead(yJoystick));
+    //--------------------------- BLUETOOTH ------------------------------------------------
+    case 1:
+      modoBluetooth();
+      break;
+
+
+  }
+  //moverMotores();
+  //int x = moverX(analogRead(xJoystick));
+  //int y = moverY(analogRead(yJoystick));
   /*
     Serial.print("X-axis: ");
     Serial.print(x);
@@ -88,16 +101,7 @@ void loop() {
   /*infrarrojo();
     delay(150);//delay de 50 para que detecte la moneda*/
 
-  if (Serial1.available() > 0) {
-    char c = Serial1.read();
-    Serial.println(c);
-  }
 
-
-  if(Serial.available()){
-    char c = Serial.read();
-    Serial1.write(c);
-  }
 }
 
 void  showMatriz() {
@@ -111,6 +115,116 @@ void  showMatriz() {
     digitalWrite(columnas[i], LOW);
   }
 }
+
+
+
+/**
+   ##############################################################################################################################################
+   ######################################################## MODO BLUETOOTH #####################################################################
+   #############################################################################################################################################
+*/
+
+
+
+void modoBluetooth() {
+  String entrada = "";
+  if (Serial1.available() > 0) {
+    char c = Serial1.read();
+    Serial.println(c);
+    controlarMovimiento(c);
+  }
+
+
+  if (Serial.available()) {
+    char c = Serial.read();
+    Serial1.write(c);
+  }
+
+  moverMotores();
+}
+
+
+/**
+   0 -> Parar
+   1 -> Adelante
+   2 -> Atras
+   3-> Derecha
+   4 -> Izquierda
+*/
+void controlarMovimiento(char c) {
+  switch (c) {
+    //---------------------------------------------- Motores Apagados
+    case '0':
+      ejeX = 0;
+      ejeY = 0;
+      break;
+    //----------------------------------------------- ADELANTE -----------------
+    case '1':
+      ejeY = 1;
+      ejeX = 0;
+      break;
+    //----------------------------------------------- ATRAS ------------------------
+    case '2':
+      ejeY = -1;
+      ejeX = 0;
+      break;
+    //---------------------------------------------- DERECHA ----------------------------------
+    case '3':
+      ejeY = 0;
+      ejeX = 1;
+      break;
+    //----------------------------------------------- IZQUIERDA ----------------------------------
+    case '4':
+      ejeY = 0;
+      ejeX = -1;
+      break;
+  }
+}
+
+
+
+
+
+/**
+   #########################################################################################################################################
+   ############################################################# MOTORES ###################################################################
+   #########################################################################################################################################
+*/
+
+void moverMotores() {
+  analogWrite(ENB, 50);
+  if (ejeY == 1) {
+    digitalWrite (IN3, HIGH);
+    digitalWrite (IN4, LOW);
+  }
+  else if (ejeY == -1) {
+    digitalWrite (IN3, LOW);
+    digitalWrite (IN4, HIGH);
+
+  }
+  else {
+    digitalWrite (IN3, LOW);
+    digitalWrite (IN4, LOW);
+
+  }
+
+  if (ejeX == 1) {
+    digitalWrite (IN1, HIGH);
+    digitalWrite (IN2, LOW);
+  } else if (ejeX == -1) {
+    digitalWrite (IN1, LOW);
+    digitalWrite (IN2, HIGH);
+  }
+  else {
+    digitalWrite (IN1, LOW);
+    digitalWrite (IN2, LOW);
+  }
+
+
+
+}
+
+
 
 int moverY(int valor) {
   if (valor ==  0) return 1;
@@ -133,7 +247,6 @@ void controlGarra(int x, int y ) {
     digitalWrite (IN3, LOW);
     digitalWrite (IN4, HIGH);
   } else {
-    ejeY = 0;
     digitalWrite (IN3, LOW);
     digitalWrite (IN4, LOW);
   }
