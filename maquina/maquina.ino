@@ -14,9 +14,9 @@ int ejeX = 0;
 
 
 //---------------------------------------------MONEDAS---------------------------------
-int sensor = 14;//1er infrarrojo 1Q
-int sensor2 = 15; //0.50 centavos
-int sensor3 = 16; //0.25 centavos
+int sensor = 46;//1er infrarrojo 1Q
+int sensor2 = 48; //0.50 centavos
+int sensor3 = 50; //0.25 centavos
 double total = 0;
 
 //----------------------Matriz de led
@@ -61,13 +61,17 @@ void setup() {
   pinMode(sensor3 , INPUT);
 
 
+  //######################### BLUETOOTH ###########################
+  Serial1.begin(38400);
+  Serial1.setTimeout(100);
 
+  Serial1.write("Puto\n");
 
 }
 
 void loop() {
 
-
+  String entrada = "";
   int x = moverX(analogRead(xJoystick));
   int y = moverY(analogRead(yJoystick));
   /*
@@ -79,22 +83,32 @@ void loop() {
   */
   // controlGarra(x, y);
   //delay(100);
-  showMatriz();
+  //showMatriz();
 
   /*infrarrojo();
-  delay(150);//delay de 50 para que detecte la moneda*/
+    delay(150);//delay de 50 para que detecte la moneda*/
 
+  if (Serial1.available() > 0) {
+    char c = Serial1.read();
+    Serial.println(c);
+  }
+
+
+  if(Serial.available()){
+    char c = Serial.read();
+    Serial1.write(c);
+  }
 }
 
 void  showMatriz() {
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
-      if(tristeza[i][j] == 1) digitalWrite(filas[j],LOW);
-      else digitalWrite(filas[j],HIGH);
+      if (tristeza[i][j] == 1) digitalWrite(filas[j], LOW);
+      else digitalWrite(filas[j], HIGH);
     }
-    digitalWrite(columnas[i],HIGH);
+    digitalWrite(columnas[i], HIGH);
     delay(1);
-    digitalWrite(columnas[i],LOW);
+    digitalWrite(columnas[i], LOW);
   }
 }
 
