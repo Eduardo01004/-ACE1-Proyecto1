@@ -1,5 +1,20 @@
 #include <Timer.h>
-int estado = 1;
+#include <LedControl.h>
+int estado = 0;
+
+//------------------------------------------ CONTROL DE VELOCIDAD DEL MOTOR ------------------------------------------
+float distancia = 42 / 8 ;//Es la distancia a la cual le corresponde cada segmento
+float velocidad = 42 / 7; //CM/S
+float tiempo = (distancia / velocidad) * 1000; //milisegundos por segmento
+
+unsigned long tiempoActual = 0; //Tiempo de Ejecucion
+unsigned long tiempoDiferenciaY = 0; //Tiempo que pasara cada vez que presionemos algo
+unsigned long tiempoDiferenciaX = 0; //Tiempo que pasara cada vez que presionemos algo
+
+//--------------------------------------------- POSICION DE LA GARRA --------------------------------------------------
+int posX = -1;
+int posY = 9;
+
 
 //------------------------------------------- MOTOR EJE Y ----------------------------
 int ENB = 10;
@@ -23,9 +38,7 @@ int sensor2 = 48; //0.50 centavos
 int sensor3 = 50; //0.25 centavos
 double total = 0;
 
-//----------------------Matriz de led
-int columnas[8] = {25, 33, 32, 28, 35, 27, 23, 22};
-int filas[8] = {29, 24, 37, 26, 30, 36, 31, 34};
+
 
 int tristeza [8][8] = {
   {0, 1, 1, 1, 1, 1, 1, 0},
@@ -37,13 +50,17 @@ int tristeza [8][8] = {
   {1, 0, 0, 0, 0, 0, 0, 1},
   {0, 1, 1, 1, 1, 1, 1, 0}
 };
+int matriz[8][8];
 
 //----------------------------------------------- JOYSTICK ------------------------------------------------------------
 #define botonJoystick 52
 #define xJoystick A14
 #define yJoystick A15
 
-Timer temporal;
+//------------------------------------------------------ MATRIZ DE LEDS --------------------------------------------------------
+LedControl lc = LedControl(45, 47, 49, 1); // DIN,CLCS,CS,#
+
+
 void setup() {
   pinMode(botonJoystick, INPUT);
   Serial.begin(9600);
@@ -56,8 +73,6 @@ void setup() {
   pinMode (IN3, OUTPUT);
   pinMode (IN4, OUTPUT);
 
-  for (int i = 0; i < 8; i++)pinMode(columnas[i], OUTPUT);
-  for (int i = 0; i < 8; i++)pinMode(filas[i], OUTPUT);
 
 
   //----------------------------MONEDAS-------------------------
@@ -68,13 +83,22 @@ void setup() {
   //######################### BLUETOOTH ###########################
   Serial1.begin(38400);
 
+  //--------------------------- MATRIZ DE LEDS --------------------
+  lc.shutdown(0, false);
+  //Intensidad de los les de la matriz con modulo
+  lc.setIntensity(0, 8);
+  //Limpiamos la matriz con modulo
+  lc.clearDisplay(0);
+
 
 }
 
 void loop() {
+  tiempoActual = millis();
   switch (estado) {
     //-------------------------- MANUAL -----------------------------------------------------
     case 0:
+      modoManual();
       break;
 
     //--------------------------- BLUETOOTH ------------------------------------------------
@@ -84,19 +108,8 @@ void loop() {
 
 
   }
-  //moverMotores();
-  //int x = moverX(analogRead(xJoystick));
-  //int y = moverY(analogRead(yJoystick));
-  /*
-    Serial.print("X-axis: ");
-    Serial.print(x);
-    Serial.print(" ");
-    Serial.print("Y-axis: ");
-    Serial.println(y);
-  */
-  // controlGarra(x, y);
-  //delay(100);
-  //showMatriz();
+  pintarRecorrido();
+  showMatriz();
 
   /*infrarrojo();
     delay(150);//delay de 50 para que detecte la moneda*/
@@ -104,18 +117,26 @@ void loop() {
 
 }
 
+/**
+   #########################################################################################################################################
+   ############################################################# MATRIZ DE LEDS ###################################################################
+   #########################################################################################################################################
+*/
 void  showMatriz() {
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
-      if (tristeza[i][j] == 1) digitalWrite(filas[j], LOW);
-      else digitalWrite(filas[j], HIGH);
+      if (matriz[i][j] == 1) lc.setLed(0, i, j, true);
+      else lc.setLed(0, i, j, false);
     }
-    digitalWrite(columnas[i], HIGH);
-    delay(1);
-    digitalWrite(columnas[i], LOW);
   }
 }
 
+void pintarRecorrido() {
+  if (posY == 9 && posX != -1) matriz[7][posX] = 1;
+  else if (posX == -1 && posY != 9) matriz[posY][0] = 1;
+  else if (posX != -1 && posY != 9) matriz[posY][posX] = 1;
+
+}
 
 
 /**
@@ -144,6 +165,16 @@ void modoBluetooth() {
 }
 
 
+
+
+
+
+
+/**
+   #########################################################################################################################################
+   ############################################################# MOTORES ###################################################################
+   #########################################################################################################################################
+*/
 /**
    0 -> Parar
    1 -> Adelante
@@ -182,40 +213,58 @@ void controlarMovimiento(char c) {
 }
 
 
-
-
-
-/**
-   #########################################################################################################################################
-   ############################################################# MOTORES ###################################################################
-   #########################################################################################################################################
-*/
-
 void moverMotores() {
   analogWrite(ENB, 50);
-  if (ejeY == 1) {
+
+  if (ejeY == 1 && posY > -1) {
+
     digitalWrite (IN3, HIGH);
     digitalWrite (IN4, LOW);
+    unsigned long temporal = tiempoActual - tiempoDiferenciaY;
+    if (temporal >= tiempo) {
+      posY--;
+      Serial.println("Arriba");
+      tiempoDiferenciaY = tiempoActual;
+    }
   }
-  else if (ejeY == -1) {
+  else if (ejeY == -1 && posY < 8) {
     digitalWrite (IN3, LOW);
     digitalWrite (IN4, HIGH);
-
+    unsigned long temporal = tiempoActual - tiempoDiferenciaY;
+    if (temporal >= tiempo) {
+      posY++;
+      Serial.println("Abajo");
+      tiempoDiferenciaY = tiempoActual;
+    }
   }
   else {
+    tiempoDiferenciaY = tiempoActual;
     digitalWrite (IN3, LOW);
     digitalWrite (IN4, LOW);
 
   }
 
-  if (ejeX == 1) {
+  if (ejeX == 1 && posX < 8) {
     digitalWrite (IN1, HIGH);
     digitalWrite (IN2, LOW);
-  } else if (ejeX == -1) {
+    unsigned long temporal = tiempoActual - tiempoDiferenciaX;
+    if (temporal >= tiempo) {
+      posX++;
+      Serial.println("Derecha");
+      tiempoDiferenciaX = tiempoActual;
+    }
+  } else if (ejeX == -1 && posX > -1) {
     digitalWrite (IN1, LOW);
     digitalWrite (IN2, HIGH);
+    unsigned long temporal = tiempoActual - tiempoDiferenciaX;
+    if (temporal >= tiempo) {
+      posX--;
+      Serial.println("Izquierda");
+      tiempoDiferenciaX = tiempoActual;
+    }
   }
   else {
+    tiempoDiferenciaX = tiempoActual;
     digitalWrite (IN1, LOW);
     digitalWrite (IN2, LOW);
   }
@@ -224,49 +273,43 @@ void moverMotores() {
 
 }
 
-
+/**
+   #########################################################################################################################################
+   ############################################################# MODO MANUAL ###################################################################
+   #########################################################################################################################################
+*/
 
 int moverY(int valor) {
-  if (valor ==  0) return 1;
-  else if (valor == 1023) return -1;
+  if (valor < 30) return 1;
+  else if (valor > 900) return -1;
   return 0;
 }
 
 int moverX(int valor) {
-  if (valor == 0) return -1;
-  else if (valor == 1023) return 1;
+  if (valor < 30) return -1;
+  else if (valor > 900) return 1;
   return 0;
 }
 
 
-void controlGarra(int x, int y ) {
-  if (y == 1) {
-    digitalWrite (IN3, HIGH);
-    digitalWrite (IN4, LOW);
-  } else if (y == -1) {
-    digitalWrite (IN3, LOW);
-    digitalWrite (IN4, HIGH);
-  } else {
-    digitalWrite (IN3, LOW);
-    digitalWrite (IN4, LOW);
-  }
-
-
-
-
-  if (x == 1) {
-    digitalWrite (IN1, HIGH);
-    digitalWrite (IN2, LOW);
-  } else if (x == -1) {
-    digitalWrite (IN1, LOW);
-    digitalWrite (IN2, HIGH);
-  } else {
-    digitalWrite (IN1, LOW);
-    digitalWrite (IN2, LOW);
-  }
+void modoManual( ) {
+  ejeX = moverX(analogRead(xJoystick));
+  ejeY = moverY(analogRead(yJoystick));
+  /*
+    Serial.print("X-axis: ");
+    Serial.print(x);
+    Serial.print(" ");
+    Serial.print("Y-axis: ");
+    Serial.println(y);
+  */
+  moverMotores();
 }
 
 
+
+//####################################################################################################################################
+//################################################ FICHAS ############################################################################
+//####################################################################################################################################
 
 void Moneda_100() {
   int valor;
