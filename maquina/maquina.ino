@@ -1,6 +1,8 @@
 #include <Timer.h>
 #include <LedControl.h>
-int estado = 0;
+#include <EEPROM.h>
+
+int estado = -1;
 
 //------------------------------------------ CONTROL DE VELOCIDAD DEL MOTOR ------------------------------------------
 float distancia = 42 / 8 ;//Es la distancia a la cual le corresponde cada segmento
@@ -13,7 +15,7 @@ unsigned long tiempoDiferenciaX = 0; //Tiempo que pasara cada vez que presionemo
 
 //--------------------------------------------- POSICION DE LA GARRA --------------------------------------------------
 int posX = -1;
-int posY = 9;
+int posY = 8;
 
 
 //------------------------------------------- MOTOR EJE Y ----------------------------
@@ -62,6 +64,7 @@ LedControl lc = LedControl(45, 47, 49, 1); // DIN,CLCS,CS,#
 
 
 void setup() {
+  tiempoActual = millis();
   pinMode(botonJoystick, INPUT);
   Serial.begin(9600);
 
@@ -90,12 +93,42 @@ void setup() {
   //Limpiamos la matriz con modulo
   lc.clearDisplay(0);
 
+  posY = EEPROM.read(2);
+  posX = EEPROM.read(0);
+
+  posX = (posX == 255) ? -1 : posX;
+
+  Serial.println(posX);
+  Serial.println(posY);
 
 }
 
 void loop() {
   tiempoActual = millis();
   switch (estado) {
+    //---------------------------------------- REGRESAR LA GARRA A SU POSICION ORIGINAL------------------------------------------------
+
+    case -1:
+      while (posY < 8 && posY > -1) {
+        tiempoActual = millis();
+        ejeY = -1;
+        ejeX = 0;
+        moverMotores();
+      }
+      ejeY = 0;
+      Serial.println("Regresamos la garra en Y");
+      while (posX < 8 && posX > -1) {
+        tiempoActual = millis();
+        ejeX = -1;
+        ejeY = 0;
+        moverMotores();
+      }
+      Serial.println("Regresamos la garra en X");
+      
+      
+      estado = 0;
+      
+      break;
     //-------------------------- MANUAL -----------------------------------------------------
     case 0:
       modoManual();
@@ -132,9 +165,9 @@ void  showMatriz() {
 }
 
 void pintarRecorrido() {
-  if (posY == 9 && posX != -1) matriz[7][posX] = 1;
-  else if (posX == -1 && posY != 9) matriz[posY][0] = 1;
-  else if (posX != -1 && posY != 9) matriz[posY][posX] = 1;
+  if (posY == 8 && posX != -1) matriz[7][posX] = 1;
+  else if (posX == -1 && posY != 8) matriz[posY][0] = 1;
+  else if (posX != -1 && posY != 8) matriz[posY][posX] = 1;
 
 }
 
@@ -223,6 +256,7 @@ void moverMotores() {
     unsigned long temporal = tiempoActual - tiempoDiferenciaY;
     if (temporal >= tiempo) {
       posY--;
+      EEPROM.put(2, posY);
       Serial.println("Arriba");
       tiempoDiferenciaY = tiempoActual;
     }
@@ -233,6 +267,7 @@ void moverMotores() {
     unsigned long temporal = tiempoActual - tiempoDiferenciaY;
     if (temporal >= tiempo) {
       posY++;
+      EEPROM.put(2, posY);
       Serial.println("Abajo");
       tiempoDiferenciaY = tiempoActual;
     }
@@ -250,6 +285,7 @@ void moverMotores() {
     unsigned long temporal = tiempoActual - tiempoDiferenciaX;
     if (temporal >= tiempo) {
       posX++;
+      EEPROM.put(0, posX);
       Serial.println("Derecha");
       tiempoDiferenciaX = tiempoActual;
     }
@@ -259,6 +295,7 @@ void moverMotores() {
     unsigned long temporal = tiempoActual - tiempoDiferenciaX;
     if (temporal >= tiempo) {
       posX--;
+      EEPROM.put(0, posX);
       Serial.println("Izquierda");
       tiempoDiferenciaX = tiempoActual;
     }
