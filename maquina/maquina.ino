@@ -14,7 +14,7 @@ unsigned long tiempoDiferenciaY = 0; //Tiempo que pasara cada vez que presionemo
 unsigned long tiempoDiferenciaX = 0; //Tiempo que pasara cada vez que presionemos algo
 
 //--------------------------------------------- POSICION DE LA GARRA --------------------------------------------------
-int posX = -1;
+int posX = 0;
 int posY = 8;
 
 
@@ -96,7 +96,7 @@ void setup() {
   posY = EEPROM.read(2);
   posX = EEPROM.read(0);
 
-  posX = (posX == 255) ? -1 : posX;
+  posX = (posX == 255) ? 0 : posX;
 
   Serial.println(posX);
   Serial.println(posY);
@@ -109,7 +109,7 @@ void loop() {
     //---------------------------------------- REGRESAR LA GARRA A SU POSICION ORIGINAL------------------------------------------------
 
     case -1:
-      while (posY < 8 && posY > -1) {
+      while (posY < 8 && posY > 0) {
         tiempoActual = millis();
         ejeY = -1;
         ejeX = 0;
@@ -117,7 +117,7 @@ void loop() {
       }
       ejeY = 0;
       Serial.println("Regresamos la garra en Y");
-      while (posX < 8 && posX > -1) {
+      while (posX < 8 && posX > 0) {
         tiempoActual = millis();
         ejeX = -1;
         ejeY = 0;
@@ -249,7 +249,7 @@ void controlarMovimiento(char c) {
 void moverMotores() {
   analogWrite(ENB, 50);
 
-  if (ejeY == 1 && posY > -1) {
+  if (ejeY == 1 && posY > 0) {
 
     digitalWrite (IN3, HIGH);
     digitalWrite (IN4, LOW);
@@ -289,7 +289,7 @@ void moverMotores() {
       Serial.println("Derecha");
       tiempoDiferenciaX = tiempoActual;
     }
-  } else if (ejeX == -1 && posX > -1) {
+  } else if (ejeX == -1 && posX > 0) {
     digitalWrite (IN1, LOW);
     digitalWrite (IN2, HIGH);
     unsigned long temporal = tiempoActual - tiempoDiferenciaX;
