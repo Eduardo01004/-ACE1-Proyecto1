@@ -124,18 +124,27 @@ void loop() {
         moverMotores();
       }
       Serial.println("Regresamos la garra en X");
-      
-      
+
+
       estado = 0;
-      
+
+      break;
+
+    //---------------------------- ESPERANDO LA CANTIDAD DE MONEDAS ------------------------
+    case 0:
+      controlMonedas();
+    break;
+    //--------------------------- STANDBY ESPERANDO UN MODO DE JUEGO ----------------------
+    case 1:
+      escojerModo();
       break;
     //-------------------------- MANUAL -----------------------------------------------------
-    case 0:
+    case 2:
       modoManual();
       break;
 
     //--------------------------- BLUETOOTH ------------------------------------------------
-    case 1:
+    case 3:
       modoBluetooth();
       break;
 
@@ -147,6 +156,29 @@ void loop() {
   /*infrarrojo();
     delay(150);//delay de 50 para que detecte la moneda*/
 
+
+}
+
+
+/**
+   #########################################################################################################################################
+   ############################################################# ESCOGER MODO ###################################################################
+   #########################################################################################################################################
+*/
+void escojerModo() {
+  String entrada = "";
+  if (Serial1.available() > 0) {
+    char c = Serial1.read();
+    Serial.println(c);
+    if(c == '0') estado = 2; //Modo Manual
+    else if(c == '1') estado = 3; //Modo Automatico
+  }
+
+
+  if (Serial.available()) {
+    char c = Serial.read();
+    Serial1.write(c);
+  }
 
 }
 
@@ -347,7 +379,13 @@ void modoManual( ) {
 //####################################################################################################################################
 //################################################ FICHAS ############################################################################
 //####################################################################################################################################
-
+void controlMonedas(){
+  if (Serial.available()) {
+    char c = Serial.read();
+    if(c == '1') estado = 1; // Standby
+    Serial1.write(c);
+  }
+}
 void Moneda_100() {
   int valor;
   valor = digitalRead(sensor);
