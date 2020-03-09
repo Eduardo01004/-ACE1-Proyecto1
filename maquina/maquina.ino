@@ -133,7 +133,7 @@ void loop() {
     //---------------------------- ESPERANDO LA CANTIDAD DE MONEDAS ------------------------
     case 0:
       controlMonedas();
-    break;
+      break;
     //--------------------------- STANDBY ESPERANDO UN MODO DE JUEGO ----------------------
     case 1:
       escojerModo();
@@ -162,6 +162,20 @@ void loop() {
 
 /**
    #########################################################################################################################################
+   ############################################################# JUEGO ###################################################################
+   #########################################################################################################################################
+*/
+
+void game() {
+  moverMotores();
+  if (Serial.available()) {
+    char c = Serial.read();
+    Serial1.write(c);
+  }
+}
+
+/**
+   #########################################################################################################################################
    ############################################################# ESCOGER MODO ###################################################################
    #########################################################################################################################################
 */
@@ -170,8 +184,14 @@ void escojerModo() {
   if (Serial1.available() > 0) {
     char c = Serial1.read();
     Serial.println(c);
-    if(c == '0') estado = 2; //Modo Manual
-    else if(c == '1') estado = 3; //Modo Automatico
+    if (c == '0') {
+      Serial.println("Modo Manual");
+      estado = 2; //Modo Manual
+    }
+    else if (c == '1') {
+      Serial.println("Modo Bluetooth");
+      estado = 3; //Modo Bluetooth
+    }
   }
 
 
@@ -220,13 +240,7 @@ void modoBluetooth() {
     controlarMovimiento(c);
   }
 
-
-  if (Serial.available()) {
-    char c = Serial.read();
-    Serial1.write(c);
-  }
-
-  moverMotores();
+  game();
 }
 
 
@@ -371,7 +385,7 @@ void modoManual( ) {
     Serial.print("Y-axis: ");
     Serial.println(y);
   */
-  moverMotores();
+  game();
 }
 
 
@@ -379,13 +393,18 @@ void modoManual( ) {
 //####################################################################################################################################
 //################################################ FICHAS ############################################################################
 //####################################################################################################################################
-void controlMonedas(){
+void controlMonedas() {
   if (Serial.available()) {
     char c = Serial.read();
-    if(c == '1') estado = 1; // Standby
+    if (c == '2') {
+      Serial.println("Pasamos a StandBy");
+      estado = 1; // Standby
+    }
     Serial1.write(c);
   }
 }
+
+
 void Moneda_100() {
   int valor;
   valor = digitalRead(sensor);
